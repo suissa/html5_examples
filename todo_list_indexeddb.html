@@ -1,0 +1,163 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Untitled Document</title>
+</head>
+
+<body>
+http://www.html5rocks.com/en/tutorials/indexeddb/todo/#toc-step1
+<script>
+//criando um objeto para encapsular as funções
+    var suissa = {};
+		
+//encapsulando em um unico objeto os diferentes acessos ao indexedDB
+    var indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB;
+		
+//padronizando as funções
+    if ('webkitIndexedDB' in window) {
+      window.IDBTransaction = window.webkitIDBTransaction;
+      window.IDBKeyRange = window.webkitIDBKeyRange;
+    }
+//objeto para encapsular o "sistema"
+    suissa.indexedDB = {};
+    suissa.indexedDB.db = null;
+		
+//função de erro
+    suissa.indexedDB.onerror = function(e) {
+      console.log(e);
+    };
+		
+//criando uma DATABASE
+    suissa.indexedDB.open = function() {
+      var request = indexedDB.open("todos");
+
+	//função de sucesso
+      request.onsuccess = function(e) {
+        var v = "0.01";
+        suissa.indexedDB.db = e.target.result;
+        var db = suissa.indexedDB.db;
+        // We can only create Object stores in a setVersion transaction;
+				
+		//conferindo a versao do banco
+        if(v!= db.version) {
+          var setVrequest = db.setVersion(v);
+
+          // onsuccess is the only place we can create Object Stores
+          setVrequest.onfailure = suissa.indexedDB.onerror;
+          setVrequest.onsuccess = function(e) {
+            if(db.objectStoreNames.contains("todo")) {
+              db.deleteObjectStore("todo");
+            }
+
+            var store = db.createObjectStore("todo",
+              {keyPath: "timeStamp"});
+
+            suissa.indexedDB.getAllTodoItems();
+          };
+        }
+        else {
+          suissa.indexedDB.getAllTodoItems();
+        }
+      };
+
+      request.onfailure = suissa.indexedDB.onerror;
+    }
+
+    suissa.indexedDB.addTodo = function(todoText) {
+      var db = suissa.indexedDB.db;
+      var trans = db.transaction(["todo"], IDBTransaction.READ_WRITE, 0);
+      var store = trans.objectStore("todo");
+
+      var data = {
+        "text": todoText,
+        "timeStamp": new Date().getTime()
+      };
+
+      var request = store.put(data);
+
+      request.onsuccess = function(e) {
+        suissa.indexedDB.getAllTodoItems();
+      };
+
+      request.onerror = function(e) {
+        console.log("Error Adding: ", e);
+      };
+    };
+
+    suissa.indexedDB.deleteTodo = function(id) {
+      var db = suissa.indexedDB.db;
+      var trans = db.transaction(["todo"], IDBTransaction.READ_WRITE, 0);
+      var store = trans.objectStore("todo");
+
+      var request = store.delete(id);
+
+      request.onsuccess = function(e) {
+        suissa.indexedDB.getAllTodoItems();
+      };
+
+      request.onerror = function(e) {
+        console.log("Error Adding: ", e);
+      };
+    };
+
+    suissa.indexedDB.getAllTodoItems = function() {
+      var todos = document.getElementById("todoItems");
+      todos.innerHTML = "";
+
+      var db = suissa.indexedDB.db;
+      var trans = db.transaction(["todo"], IDBTransaction.READ_WRITE, 0);
+      var store = trans.objectStore("todo");
+
+      // Get everything in the store;
+      var keyRange = IDBKeyRange.lowerBound(0);
+      var cursorRequest = store.openCursor(keyRange);
+
+      cursorRequest.onsuccess = function(e) {
+        var result = e.target.result;
+        if(!!result == false)
+          return;
+
+        renderTodo(result.value);
+        result.continue();
+      };
+
+      cursorRequest.onerror = suissa.indexedDB.onerror;
+    };
+
+    function renderTodo(row) {
+      var todos = document.getElementById("todoItems");
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      var t = document.createTextNode(row.text);
+
+      a.addEventListener("click", function() {
+        suissa.indexedDB.deleteTodo(row.timeStamp);
+      }, false);
+
+      a.textContent = " [Delete]";
+      li.appendChild(t);
+      li.appendChild(a);
+      todos.appendChild(li)
+    }
+
+    function addTodo() {
+      var todo = document.getElementById("todo");
+      suissa.indexedDB.addTodo(todo.value);
+      todo.value = "";
+    }
+
+    function init() {
+      suissa.indexedDB.open();
+    }
+
+    window.addEventListener("DOMContentLoaded", init(), false);
+  </script>
+  
+  <ul id="todoItems"></ul>
+  <input type="text" id="todo" name="todo"
+      placeholder="What do you need to do?" style="width: 200px;" />
+    <input type="submit" value="Add Todo Item"
+      onclick="addTodo(); return false;"/>
+</body>
+</html>

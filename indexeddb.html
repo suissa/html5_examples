@@ -1,0 +1,32 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Untitled Document</title>
+</head>
+
+<body>
+<script type="application/javascript">
+
+alert(supports_indexedDB());
+if(supports_indexedDB()){
+	var db;
+	var request = mozIndexedDB.open("MyTestDatabase");
+	request.onerror = function(event) {
+		alert("Why didn't you allow my web app to use IndexedDB?!");
+	};
+	request.onsuccess = function(event) {
+		db = request.result;
+	};
+}
+
+function supports_indexedDB() {
+  try {
+    return !!window.mozIndexedDB;
+  } catch (e) {
+    return false;
+  }
+}
+</script>
+</body>
+</html>
